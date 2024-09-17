@@ -2,9 +2,12 @@ package com.example.login_auth_api.controllers;
 
 
 import com.example.login_auth_api.domain.DonationPlace;
+import com.example.login_auth_api.domain.DonationPlaceDonationType;
+import com.example.login_auth_api.domain.DonationType;
 import com.example.login_auth_api.dto.DonationPlaceDTO;
-import com.example.login_auth_api.dto.ResponseDTO;
+import com.example.login_auth_api.repositories.DonationPlaceDonationTypeRepository;
 import com.example.login_auth_api.repositories.DonationPlaceRepository;
+import com.example.login_auth_api.repositories.DonationTypeRepository;
 import com.example.login_auth_api.service.DonationPlaceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -23,21 +27,37 @@ public class DonationPlaceController {
 private DonationPlaceRepository donationPlacerepository;
 @Autowired
 private DonationPlaceService donationPlaceService;
+    @Autowired
+    private DonationPlaceDonationTypeRepository donationPlaceDonationTypeRepository;
+    @Autowired
+    private DonationTypeRepository donationTypeRepository;
 
     @GetMapping
-    public List<DonationPlace> findAll(){
+    public List<DonationPlaceDTO> findAll(){
+        List<DonationPlace> donationPlaceList = donationPlacerepository.findAll();
+        List<DonationPlaceDTO> donationPlaceDTOArrayList = new ArrayList<>();
 
-        return donationPlacerepository.findAll();
+        for(DonationPlace donation : donationPlaceList){
+            List<DonationPlaceDonationType> donationTypeLocationList = donationPlaceDonationTypeRepository.findAllByDonationPlaceId(donation.getId());
+            List<DonationType> donationLocationType = new ArrayList<>();
+
+            for (DonationPlaceDonationType DonationTypePlace : donationTypeLocationList  ){
+                donationLocationType.add(donationTypeRepository.findById(DonationTypePlace.getId()).get());
+            }
+            donationPlaceDTOArrayList.add(new DonationPlaceDTO(donation.getName(), donation.getLatitude(),donation.getLongitude(),donation.getAddress(),donationLocationType));
+        }
+        return donationPlaceDTOArrayList;
     }
 
     @PostMapping("/registerDonationPlace")
-    public ResponseEntity<DonationPlaceDTO> registerDonationPlace(@RequestBody DonationPlaceDTO body){
+    public ResponseEntity<?> registerDonationPlace(@RequestBody DonationPlaceDTO body){
             try {
-                DonationPlaceDTO response = donationPlaceService.donationPlaceRegister(body);
-                return ResponseEntity.ok(response);
+                donationPlaceService.donationPlaceRegister(body);
+                return (ResponseEntity<?>) ResponseEntity.ok("Sucesso");
             } catch (RuntimeException e) {
+                System.out.println("Error");
                 e.printStackTrace();
-                return ResponseEntity.badRequest().body(new DonationPlaceDTO("não foi", "Error","Error","Error"));
+                return (ResponseEntity<DonationPlaceDTO>) ResponseEntity.badRequest();
             }
     }
 
